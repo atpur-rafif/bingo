@@ -1,9 +1,8 @@
 {
-  "type": "module",
   "scripts": {
     "tsc-front": "tsc --project ./front-end/tsconfig.json --watch",
     "tsc-back": "tsc --project ./back-end/tsconfig.json --watch",
-    "server": "nodemon ./dist/index.js --watch \"./dist/**/*\" --ignore \"./dist/static/**/*\"",
+    "server": "nodemon --watch \"./dist/**/*\" --ignore \"./dist/static/**/*\" --exec \"if [ -f ./dist/index.js ]; then node ./dist/index.js; fi\"",
     "cp-front": "mkdir -p ./dist/static && cp ./front-end/index.* ./dist/static",
     "static": "nodemon -e \"*\" --watch './front-end/*' --ignore './front-end/script' --exec \"npm run cp-front\"",
     "dev": "conc -n \"tsc-front,tsc-back,static,server\" \"npm run tsc-front\" \"npm run tsc-back\" \"npm run static\" \"npm run server\""
@@ -11,6 +10,14 @@
   "devDependencies": {
     "@types/node": "^20.4.5",
     "concurrently": "^8.2.0",
+    "connect-livereload": "^0.6.1",
+    "livereload": "^0.9.3",
     "nodemon": "^3.0.1"
+  },
+  "dependencies": {
+    "@types/connect-livereload": "^0.6.0",
+    "@types/express": "^4.17.17",
+    "@types/livereload": "^0.9.2",
+    "express": "^4.18.2"
   }
 }
