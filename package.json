@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "scripts": {
+    "tsc-front": "tsc --project ./front-end/tsconfig.json --watch",
+    "tsc-back": "tsc --project ./back-end/tsconfig.json --watch",
+    "server": "nodemon ./dist/index.js --watch \"./dist/**/*\" --ignore \"./dist/static/**/*\"",
+    "cp-front": "mkdir -p ./dist/static && cp ./front-end/index.* ./dist/static",
+    "static": "nodemon -e \"*\" --watch './front-end/*' --ignore './front-end/script' --exec \"npm run cp-front\"",
+    "dev": "conc -n \"tsc-front,tsc-back,static,server\" \"npm run tsc-front\" \"npm run tsc-back\" \"npm run static\" \"npm run server\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.5",
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
+  }
+}
