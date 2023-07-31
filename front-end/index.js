@@ -1,1 +1,1 @@
-console.log("fklddngak sih")
+import "./script/index.js"
