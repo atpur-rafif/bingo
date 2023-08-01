@@ -2,6 +2,11 @@ const app = document.getElementById("app") as HTMLElement
 const gameTemplate = document.getElementById("game-template") as HTMLTemplateElement
 const gridTemplate = document.getElementById("grid-template") as HTMLTemplateElement
 
+const ws = new WebSocket("ws://" + window.location.host)
+ws.addEventListener("open", () => {
+    ws.send("Hello")
+})
+
 class Grid{
     el: HTMLElement
     private value: number | null = null
