@@ -33,12 +33,14 @@ class Grid{
 }
 
 class Game{
-    size: number = 3
+    size: number = 2
     el: HTMLElement
     ready: boolean = false
     currentFill: number = 0
     grids: Grid[] = []
     state: "fill" | "play" | undefined
+    PosToVal: Record<number, number> = {}
+    ValToPos: Record<number, number> = {}
 
     constructor(){
         const frag = gameTemplate.content.cloneNode(true) as DocumentFragment
@@ -55,9 +57,8 @@ class Game{
         this.onStartFill()
     }
 
-    getGridFromEvent(e: Event){
-        const i = parseInt((e.currentTarget as any).getAttribute("data-pos"))
-        return this.grids[i]
+    getPosFromEvent(e: Event){
+        return parseInt((e.currentTarget as any).getAttribute("data-pos"))
     }
 
     onStartFill(){
@@ -67,17 +68,23 @@ class Game{
             g.el.classList.add("fill")
         })
 
-        //this.grids.forEach(g => g.el.click())
+        requestAnimationFrame(() => {
+            this.grids.forEach(g => g.el.click())
+        })
     }
 
     onFill = (e: Event) => {
-        const grid = this.getGridFromEvent(e)
+        const index = this.getPosFromEvent(e)
+        const grid = this.grids[index]
 
         if(grid.getValue() === null){
             ++this.currentFill
             grid.setValue(this.currentFill)
             grid.el.classList.remove("fill")
             grid.el.classList.add("filled")
+
+            this.PosToVal[index] = this.currentFill
+            this.ValToPos[this.currentFill] = index
         }
 
         if(this.currentFill === this.size ** 2) this.onEndFill()
@@ -99,13 +106,18 @@ class Game{
             g.el.addEventListener("click", this.onPlay)
             g.el.classList.add("play")
         })
+
+        requestAnimationFrame(() => {
+            this.grids.forEach(g => g.el.click())
+        })
     }
 
     onPlay = (e: Event) => {
-        const grid = this.getGridFromEvent(e)
-        grid.check()
+        const index = this.getPosFromEvent(e)
+        const grid = this.grids[index]
         grid.el.classList.remove("play")
         grid.el.classList.add("played")
+        grid.check()
     }
 
     onEndPlay(){
