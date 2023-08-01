@@ -8,22 +8,18 @@ class Grid{
     private symbol: HTMLElement
     private checked: boolean = false
 
-    constructor(){
+    constructor(pos: number){
         const frag = gridTemplate.content.cloneNode(true) as DocumentFragment
         this.el = frag.firstElementChild as HTMLElement
+        this.el.setAttribute("data-pos", pos.toString())
         this.symbol = this.el.querySelector("[data-symbol]") as HTMLElement
         this.setValue(null)
     }
 
     setValue(i: number | null){
         this.value = i
-        if(this.value !== null){
-            this.symbol.innerHTML = this.value.toString()
-            this.el.style.cursor = "auto"
-        } else {
-            this.symbol.innerHTML = "?"
-            this.el.style.cursor = "pointer"
-        }
+        if(this.value !== null) this.symbol.innerHTML = this.value.toString()
+        else this.symbol.innerHTML = "?"
     }
 
     getValue(){
@@ -37,41 +33,86 @@ class Grid{
 }
 
 class Game{
+    size: number = 3
     el: HTMLElement
     ready: boolean = false
     currentFill: number = 0
-    grid: Grid[] = []
-    state: "fill" | "filled" | "play" = "fill"
+    grids: Grid[] = []
+    state: "fill" | "play" | undefined
 
     constructor(){
         const frag = gameTemplate.content.cloneNode(true) as DocumentFragment
         this.el = frag.querySelector(".game") as HTMLElement
+        this.el.style.gridTemplateColumns = `repeat(${this.size}, 1fr)`
+        this.el.style.gridTemplateRows = `repeat(${this.size}, 1fr)`
 
-        for(let i = 0; i < 5 * 5; ++i){
-            const g = new Grid()
-            g.el.addEventListener("click", this.createClickHandler(g))
+        for(let i = 0; i < this.size ** 2; ++i){
+            const g = new Grid(i)
+            this.grids.push(g)
             this.el.append(g.el)
-            g.el.click()
         }
+
+        this.onStartFill()
     }
 
-    createClickHandler(g: Grid){
-        return () => {
-            if (this.state === "fill") {
-                if (g.getValue() === null) {
-                    ++this.currentFill;
-                    g.setValue(this.currentFill)
-                }
-                if (this.currentFill === 25)  this.onFilled()
-            } else if(this.state === "play") {
-                g.check()
-            }
-        }
+    getGridFromEvent(e: Event){
+        const i = parseInt((e.currentTarget as any).getAttribute("data-pos"))
+        return this.grids[i]
     }
 
-    onFilled(){
+    onStartFill(){
+        this.state = "fill"
+        this.grids.forEach(g => {
+            g.el.addEventListener("click", this.onFill)
+            g.el.classList.add("fill")
+        })
+
+        //this.grids.forEach(g => g.el.click())
+    }
+
+    onFill = (e: Event) => {
+        const grid = this.getGridFromEvent(e)
+
+        if(grid.getValue() === null){
+            ++this.currentFill
+            grid.setValue(this.currentFill)
+            grid.el.classList.remove("fill")
+            grid.el.classList.add("filled")
+        }
+
+        if(this.currentFill === this.size ** 2) this.onEndFill()
+    }
+
+    onEndFill(){
+        this.grids.forEach(g => {
+            g.el.removeEventListener("click", this.onFill)
+            g.el.classList.remove("filled")
+        })
+        this.state = undefined
+
+        this.onStartPlay()
+    }
+
+    onStartPlay(){
         this.state = "play"
-        console.log(this)
+        this.grids.forEach(g => {
+            g.el.addEventListener("click", this.onPlay)
+            g.el.classList.add("play")
+        })
+    }
+
+    onPlay = (e: Event) => {
+        const grid = this.getGridFromEvent(e)
+        grid.check()
+        grid.el.classList.remove("play")
+        grid.el.classList.add("played")
+    }
+
+    onEndPlay(){
+        this.grids.forEach(g => {
+            g.el.classList.remove("played")
+        })
+        console.log("Over")
     }
 }
 
