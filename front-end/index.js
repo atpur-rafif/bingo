@@ -1,1 +1,1 @@
-import "./script/index.js"
+require(["./script/index"])

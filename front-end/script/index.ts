@@ -1,10 +1,17 @@
+import "./test"
 const app = document.getElementById("app") as HTMLElement
 const gameTemplate = document.getElementById("game-template") as HTMLTemplateElement
 const gridTemplate = document.getElementById("grid-template") as HTMLTemplateElement
 
 const ws = new WebSocket("ws://" + window.location.host)
+let wsResolver: CallableFunction
+const wsWaitTillReady = new Promise<void>(r => wsResolver = r)
 ws.addEventListener("open", () => {
-    ws.send("Hello")
+    wsResolver()
+})
+
+ws.addEventListener("message", (msg) => {
+    console.log(msg.data)
 })
 
 class Grid{
@@ -82,6 +89,7 @@ class Game{
         const index = this.getPosFromEvent(e)
         const grid = this.grids[index]
 
+
         if(grid.getValue() === null){
             ++this.currentFill
             grid.setValue(this.currentFill)
@@ -91,7 +99,6 @@ class Game{
             this.PosToVal[index] = this.currentFill
             this.ValToPos[this.currentFill] = index
         }
-
         if(this.currentFill === this.size ** 2) this.onEndFill()
     }
 

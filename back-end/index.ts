@@ -1,10 +1,14 @@
-import livereload from "livereload"
-import connectLivereload from "connect-livereload"
+import livereload from "livereload";
+import connectLivereload from "connect-livereload";
 import path from "path";
 import express from "express";
 import { WebSocket, WebSocketServer } from "ws";
-import { Server } from "http"
-import { Room } from "./room"
+import { Server } from "http";
+import { Room, Player } from "./room";
+import { WSReq, WS, WSError } from "@types";
+
+const debugValue = true
+function debug(msg: any){ if(debugValue) console.log(msg) }
 
 const PORT = 8080
 const app = express();
@@ -28,23 +32,120 @@ liveReloadServer.watch(path.join(__dirname, './static'));
 app.use(connectLivereload());
 app.use(express.static(path.join(__dirname, './static')))
 
+app.get("/debug", (_, res) => {
+    console.log(ROOM)
+    res.send(JSON.stringify(ROOM))
+})
+
 const wss = new WebSocketServer({ server })
 
-wss.on('connection', (ws, req) => {
-    console.log("Connected")
+const ROOM: Record<string, Room> = {}
 
-    ws.on("message", (msg) => {
+type ConnectionState = {
+    room?: Room
+    player?: Player
+}
+
+const handler: {
+    [T in WSReq["type"]]: Extract<WS, [{ type: T }, any]> extends [infer A, infer B] ? (
+        data: A,
+        state: ConnectionState,
+        webSocket: WebSocket
+    ) => B | WSError : never
+} = {
+    create(data, state, webSocket){
+        if(typeof data.name !== "string") throw `Invalid name`
+        if(data.name.length < 5) throw `Invalid name length, minimal 5`
+        if(typeof data.size !== "number") throw `Invalid size`
+
+        const p = new Player({
+            name: data.name,
+            webSocket
+        })
+
+        const r = new Room({
+            size: data.size
+        })
+
+        r.addPlayer(p, true)
+        ROOM[r.id] = r
+        state.room = r
+        state.player = p
+
+        return {
+            type: "created",
+            roomId: r.id,
+            playerId: p.id,
+            size: r.size,
+        }
+    },
+    join(data, state, webSocket){
+        const r = ROOM[data.roomId]
+        if(r){
+            const p = new Player({
+                name: data.name,
+                webSocket
+            })
+
+            r.addPlayer(p)
+
+            state.room = r
+            state.player = p
+
+            return {
+                type: "joined",
+                roomId: r.id,
+                playerId: p.id,
+                size: r.size
+            }
+        } else {
+            return {
+                type: "error",
+                msg: "Room not found"
+            }
+        }
+    },
+    ready(data, state){
+
+    },
+    turn(data, state){
+        return {
+            type: "turned",
+            pos: 0
+        }
+    },
+}
+
+wss.addListener("connection", (client) => {
+    const state: ConnectionState = {}
+
+    client.addEventListener("message", (e) => {
         try {
-            console.log(JSON.parse(msg.toString()))
+            const data: WSReq = JSON.parse(e.data.toString())
+            const fn = handler[data.type]
+            if(!fn) throw Error(`type "${data.type}" is invalid`)
+            const res = handler[data.type](data as any, state, client)
+            client.send(JSON.stringify(res))
         } catch (error) {
-            console.log("-")
+            client.send(JSON.stringify({
+                type: "error",
+                msg: (error as any).toString()
+            } as WSError))
         }
     })
 
-    ws.on("close", ()=>{
-        console.log("Disconnected")
+    client.addEventListener("close", () => {
+        const room = state.room
+        const player = state.player
+        if(!room || !player) return
+
+        delete state.player
+        room.removePlayer(player)
+        if(room.gameMaster === player){
+            delete state.room
+            delete ROOM[room.id]
+        }
     })
 })
-
 
 server.listen(PORT)

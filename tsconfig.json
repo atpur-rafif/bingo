@@ -1,6 +1,9 @@
 {
     "compilerOptions": {
         "preserveWatchOutput": true,
-        "strict": true
+        "strict": true,
+        "paths": {
+            "@types": ["./types.d.ts"]
+        }
     }
 }

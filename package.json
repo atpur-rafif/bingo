@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "tsc-front": "tsc --project ./front-end/tsconfig.json --watch",
+    "tsc-front": "tsc --project ./front-end/script/tsconfig.json --watch",
     "tsc-back": "tsc --project ./back-end/tsconfig.json --watch",
     "server": "nodemon --watch \"./dist/**/*\" --ignore \"./dist/static/**/*\" --exec \"if [ -f ./dist/index.js ]; then node ./dist/index.js; fi\"",
     "cp-front": "mkdir -p ./dist/static && cp ./front-end/index.* ./dist/static",
