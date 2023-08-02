@@ -3,7 +3,8 @@
     "compilerOptions": {
         "rootDir": ".",
         "outDir": "../../dist/static/script",
-        "module": "AMD"
+        "module": "AMD",
+        "target": "ES2015"
     },
     "include": ["."]
 }

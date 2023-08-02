@@ -39,6 +39,7 @@ app.get("/debug", (_, res) => {
 
 const wss = new WebSocketServer({ server })
 
+// TODO: Make getRoom function
 const ROOM: Record<string, Room> = {}
 
 type ConnectionState = {
@@ -81,32 +82,41 @@ const handler: {
     },
     join(data, state, webSocket){
         const r = ROOM[data.roomId]
-        if(r){
-            const p = new Player({
-                name: data.name,
-                webSocket
-            })
+        if(typeof data.roomId !== "string") throw `Invalid id`
+        if (!r) throw "Room not found"
 
-            r.addPlayer(p)
+        const p = new Player({
+            name: data.name,
+            webSocket
+        })
 
-            state.room = r
-            state.player = p
+        r.addPlayer(p)
 
-            return {
-                type: "joined",
-                roomId: r.id,
-                playerId: p.id,
-                size: r.size
-            }
-        } else {
-            return {
-                type: "error",
-                msg: "Room not found"
-            }
+        state.room = r
+        state.player = p
+
+        return {
+            type: "joined",
+            roomId: r.id,
+            playerId: p.id,
+            size: r.size
         }
     },
     ready(data, state){
+        const r = ROOM[data.roomId]
+        const p = r.getPlayer(data.playerId)
+        if(!r || !p) throw "Invalid room or player"
 
+        p.setReady({
+            PosToVal: data.PosToVal,
+            ValToPos: data.ValToPos
+        })
+
+        if(r.allReady()){
+            return {
+                type: "readied"
+            }
+        }
     },
     turn(data, state){
         return {
@@ -125,7 +135,10 @@ wss.addListener("connection", (client) => {
             const fn = handler[data.type]
             if(!fn) throw Error(`type "${data.type}" is invalid`)
             const res = handler[data.type](data as any, state, client)
-            client.send(JSON.stringify(res))
+
+            const r = state.room
+            if(!r) throw "Invalid room"
+            r.broadcast(JSON.stringify(res))
         } catch (error) {
             client.send(JSON.stringify({
                 type: "error",

@@ -15,8 +15,8 @@ type WSReady = {
     type: "ready"
     roomId: string
     playerId: string,
-    PosToValue: Record<number, number>
-    ValueToPos: Record<number, number>
+    PosToVal: Record<number, number>
+    ValToPos: Record<number, number>
 }
 
 type WSTurn = {
@@ -44,6 +44,10 @@ type WSJoined = {
     size: number,
 }
 
+type WSReadied = {
+    type: "readied",
+}
+
 type WSTurned = {
     type: "turned",
     pos: number
@@ -56,10 +60,11 @@ type WSError = {
 
 export type WSRes = WSCreated
     | WSJoined
+    | WSReadied
     | WSTurned
     | WSError
 
-export type WS = [WSReady, void]
+export type WS = [WSReady, WSReadied | void]
     | [WSCreate, WSCreated]
     | [WSJoin, WSJoined]
     | [WSTurn, WSTurned]

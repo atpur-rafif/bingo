@@ -27,6 +27,26 @@ export class Room{
     removePlayer(player: Player){
         delete this.players[player.id]
     }
+
+    getPlayer(id: string){
+        return this.players[id]
+    }
+
+    forEachPlayer(fn: (p: Player) => void){
+        Object.values(this.players).forEach(p => fn(p))
+    }
+
+    broadcast(data: string){
+        this.forEachPlayer(p => p.ws.send(data))
+    }
+
+    allReady(){
+        let ready = true
+        this.forEachPlayer(p => {
+            if(!p.ready) ready = false
+        })
+        return ready
+    }
 }
 
 const game = new Room({
