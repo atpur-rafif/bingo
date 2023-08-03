@@ -1,18 +1,19 @@
+// Fix this thing
 type WSCreate = {
-    type: "create",
+    eventName: "create",
     roomId: string,
     name: string,
     size: number
 }
 
 type WSJoin = {
-    type: "join",
+    eventName: "join",
     roomId: string,
     name: string
 }
 
 type WSReady = {
-    type: "ready"
+    eventName: "ready"
     roomId: string
     playerId: string,
     PosToVal: Record<number, number>
@@ -20,7 +21,7 @@ type WSReady = {
 }
 
 type WSTurn = {
-    type: "turn"
+    eventName: "turn"
     pos: number
 }
 
@@ -29,32 +30,31 @@ export type WSReq = WSCreate
     | WSReady
     | WSTurn
 
-
 type WSCreated = {
-    type: "created"
+    eventName: "created"
     roomId: string
     playerId: string
     size: number
 }
 
 type WSJoined = {
-    type: "joined",
+    eventName: "joined",
     roomId: string,
     playerId: string
     size: number,
 }
 
 type WSReadied = {
-    type: "readied",
+    eventName: "readied",
 }
 
 type WSTurned = {
-    type: "turned",
+    eventName: "turned",
     pos: number
 }
 
 type WSError = {
-    type: "error"
+    eventName: "error"
     msg: string
 }
 

@@ -47,104 +47,66 @@ type ConnectionState = {
     player?: Player
 }
 
-const handler: {
-    [T in WSReq["type"]]: Extract<WS, [{ type: T }, any]> extends [infer A, infer B] ? (
-        data: A,
-        state: ConnectionState,
-        webSocket: WebSocket
-    ) => B | WSError : never
-} = {
-    create(data, state, webSocket){
-        if(typeof data.name !== "string") throw `Invalid name`
-        if(data.name.length < 5) throw `Invalid name length, minimal 5`
-        if(typeof data.size !== "number") throw `Invalid size`
-
-        const p = new Player({
-            name: data.name,
-            webSocket
-        })
-
-        const r = new Room({
-            size: data.size
-        })
-
-        r.addPlayer(p, true)
-        ROOM[r.id] = r
-        state.room = r
-        state.player = p
-
-        return {
-            type: "created",
-            roomId: r.id,
-            playerId: p.id,
-            size: r.size,
-        }
-    },
-    join(data, state, webSocket){
-        const r = ROOM[data.roomId]
-        if(typeof data.roomId !== "string") throw `Invalid id`
-        if (!r) throw "Room not found"
-
-        const p = new Player({
-            name: data.name,
-            webSocket
-        })
-
-        r.addPlayer(p)
-
-        state.room = r
-        state.player = p
-
-        return {
-            type: "joined",
-            roomId: r.id,
-            playerId: p.id,
-            size: r.size
-        }
-    },
-    ready(data, state){
-        const r = ROOM[data.roomId]
-        const p = r.getPlayer(data.playerId)
-        if(!r || !p) throw "Invalid room or player"
-
-        p.setReady({
-            PosToVal: data.PosToVal,
-            ValToPos: data.ValToPos
-        })
-
-        if(r.allReady()){
-            return {
-                type: "readied"
-            }
-        }
-    },
-    turn(data, state){
-        return {
-            type: "turned",
-            pos: 0
-        }
-    },
+type WebSocketExtendedListener = {
+    [T in WSReq["eventName"]]: (data: Omit<Extract<WSReq, { type: T }>, "type">) => void
 }
 
-wss.addListener("connection", (client) => {
+interface WebSocketExtended extends WebSocket{
+    debug: boolean
+    addCustomEventListener<T extends keyof WebSocketExtendedListener>(type: T, cb: WebSocketExtendedListener[T]): void
+    removeCustomEventListener<T extends keyof WebSocketExtendedListener>(type: T, cb: WebSocketExtendedListener[T]): void
+    emitCustomEvent<T extends keyof WebSocketExtendedListener>(type: T, data: Parameters<WebSocketExtendedListener[T]>[0]): void
+}
+
+const extendWebSocket = (ws: WebSocket): WebSocketExtended => {
+    const newWs = ws as WebSocketExtended
+    const listener:{
+        [T in keyof WebSocketExtendedListener]?: WebSocketExtendedListener[T][]
+    } = {}
+
+    newWs.debug = true
+    newWs.addCustomEventListener = (type, cb) => {
+        if(!listener[type]) listener[type] = []
+        listener[type]?.push(cb)
+    }
+
+    newWs.removeCustomEventListener = (type, cb) => {
+        if(!listener[type]) return
+        const index = listener[type]?.indexOf(cb)
+        if(index === undefined) return
+        listener[type]?.splice(index, 1)
+    }
+
+    newWs.emitCustomEvent = (type, data) => {
+        if(!listener[type]) return
+        listener[type]?.forEach(cb => cb(data))
+    }
+
+    return ws as any
+}
+
+wss.addListener("connection", (rawClient) => {
+    const client = extendWebSocket(rawClient)
     const state: ConnectionState = {}
 
     client.addEventListener("message", (e) => {
         try {
             const data: WSReq = JSON.parse(e.data.toString())
-            const fn = handler[data.type]
-            if(!fn) throw Error(`type "${data.type}" is invalid`)
-            const res = handler[data.type](data as any, state, client)
-
-            const r = state.room
-            if(!r) throw "Invalid room"
-            r.broadcast(JSON.stringify(res))
+            client.emitCustomEvent(data.eventName, data as any)
         } catch (error) {
             client.send(JSON.stringify({
-                type: "error",
+                eventName: "error",
                 msg: (error as any).toString()
             } as WSError))
         }
+    })
+
+    client.addCustomEventListener("create", (d) => {
+        console.log(d)
+    })
+    
+    client.addCustomEventListener("join", (d) => {
+        console.log("Joined")
     })
 
     client.addEventListener("close", () => {
