@@ -1,11 +1,7 @@
-import type { WS, WSReq, WSRes } from "@types"
+import type { GameEventRequest, GameEventResponse, WebSocketEvent } from "@types"
 
-type GameEventResponse = {
-    [T in WSRes["eventName"]]: ((data: Omit<Extract<WSRes, { eventName: T }>, "eventName">) => any)
-}
-
-type GameEventRequest = {
-    [T in WSReq["eventName"]]: Omit<Extract<WSReq, { eventName: T}>, "eventName">
+type GameEventResponseListener = {
+    [T in keyof GameEventResponse]: (data: GameEventResponse[T]) => void
 }
 
 const wsLocation = "ws://" + window.location.host
@@ -19,58 +15,78 @@ class GameEvent{
         this.wsWait = new Promise<void>(r => resolver = r)
         this.ws = new WebSocket(wsLocation)
         this.ws.onopen = () => { resolver() }
+        this.ws.onmessage = (e) => {
+            try {
+                const event = JSON.parse(e.data)
+                const eventName = event.eventName
+                delete event.eventName
+                this.emit(eventName, event.data)
+            } catch {}
+        }
     }
 
-    debug: boolean = false
     private listener: {
-        [T in WSRes["eventName"]]?: GameEventResponse[T][]
+        [T in keyof GameEventResponse]?: GameEventResponseListener[T][]
     } = {}
 
-    addEventListener<T extends keyof GameEventResponse>(type: T, callback: GameEventResponse[T]){
-        if(!this.listener[type]) this.listener[type] = []
-        this.listener[type]?.push(callback)
+    addEventListener<T extends keyof GameEventResponse>(eventName: T, callback: GameEventResponseListener[T]){
+        if(!this.listener[eventName]) this.listener[eventName] = []
+        this.listener[eventName]?.push(callback)
     }
 
-    removeEventListener<T extends keyof GameEventResponse>(type: T, callback: GameEventResponse[T]){
-        if(!this.listener[type]) return
-        const index = this.listener[type]?.indexOf(callback)
+    removeEventListener<T extends keyof GameEventResponse>(eventName: T, callback: GameEventResponseListener[T]){
+        if(!this.listener[eventName]) return
+        const index = this.listener[eventName]?.indexOf(callback)
         if(index === undefined) return
-        this.listener[type]?.splice(index, 1)
+        this.listener[eventName]?.splice(index, 1)
     }
 
-    emit<T extends keyof GameEventResponse>(type: T, param: Parameters<GameEventResponse[T]>[0]){
-        if(this.debug){
-            console.log({
-                eventName: type,
-                ...param
-            })
-        }
+    emit<T extends keyof GameEventResponse>(eventName: T, data: GameEventResponse[T]){
+        console.log({
+            eventName: eventName,
+            ...data
+        })
 
-        if(!this.listener[type]) return
-        this.listener[type]?.forEach(cb => cb(param))
+        if (!this.listener[eventName]) return
+        this.listener[eventName]?.forEach(cb => cb(data))
     }
 
-    async send<T extends keyof GameEventRequest>(type: T, data: GameEventRequest[T]){
+    async send<T extends keyof GameEventRequest>(eventName: T, data: GameEventRequest[T]){
         await this.wsWait
         this.ws.send(JSON.stringify({
-            eventName: type,
-            ...data
-        }))
+            eventName: eventName,
+            data
+        } as WebSocketEvent))
     }
 }
 
-const gameEvent1 = new GameEvent()
-const gameEvent2 = new GameEvent()
+const g1 = new GameEvent()
+const g2 = new GameEvent()
 
-gameEvent1.send("create", {
+g1.send("create", {
     name: "Helo",
-    roomId: "test",
-    size: 12
+    size: 12,
 })
 
-gameEvent1.addEventListener("created", () => {
-    gameEvent2.send("join", {
+g1.addEventListener("created", (e) => {
+    g2.send("join", {
         name: "lmao",
-        roomId: "test",
+        roomId: e.roomId
+    })
+})
+
+g1.addEventListener("joined", (e) => {
+    g1.send("start", {})
+})
+
+g1.addEventListener("started", () => {
+    g1.send("ready", {
+        PosToVal: {},
+        ValToPos: {}
+    })
+
+    g2.send("ready", {
+        PosToVal: {},
+        ValToPos: {}
     })
 })

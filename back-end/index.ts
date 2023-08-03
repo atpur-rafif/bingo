@@ -4,8 +4,10 @@ import path from "path";
 import express from "express";
 import { WebSocket, WebSocketServer } from "ws";
 import { Server } from "http";
-import { Room, Player } from "./room";
-import { WSReq, WS, WSError } from "@types";
+import { Room } from "./room";
+import { Player } from "./player";
+import { GameEventRequest, GameEventResponse, WebSocketEvent } from "@types";
+import { extendWebSocket } from "./ws-extend";
 
 const debugValue = true
 function debug(msg: any){ if(debugValue) console.log(msg) }
@@ -43,70 +45,79 @@ const wss = new WebSocketServer({ server })
 const ROOM: Record<string, Room> = {}
 
 type ConnectionState = {
-    room?: Room
-    player?: Player
-}
-
-type WebSocketExtendedListener = {
-    [T in WSReq["eventName"]]: (data: Omit<Extract<WSReq, { type: T }>, "type">) => void
-}
-
-interface WebSocketExtended extends WebSocket{
-    debug: boolean
-    addCustomEventListener<T extends keyof WebSocketExtendedListener>(type: T, cb: WebSocketExtendedListener[T]): void
-    removeCustomEventListener<T extends keyof WebSocketExtendedListener>(type: T, cb: WebSocketExtendedListener[T]): void
-    emitCustomEvent<T extends keyof WebSocketExtendedListener>(type: T, data: Parameters<WebSocketExtendedListener[T]>[0]): void
-}
-
-const extendWebSocket = (ws: WebSocket): WebSocketExtended => {
-    const newWs = ws as WebSocketExtended
-    const listener:{
-        [T in keyof WebSocketExtendedListener]?: WebSocketExtendedListener[T][]
-    } = {}
-
-    newWs.debug = true
-    newWs.addCustomEventListener = (type, cb) => {
-        if(!listener[type]) listener[type] = []
-        listener[type]?.push(cb)
-    }
-
-    newWs.removeCustomEventListener = (type, cb) => {
-        if(!listener[type]) return
-        const index = listener[type]?.indexOf(cb)
-        if(index === undefined) return
-        listener[type]?.splice(index, 1)
-    }
-
-    newWs.emitCustomEvent = (type, data) => {
-        if(!listener[type]) return
-        listener[type]?.forEach(cb => cb(data))
-    }
-
-    return ws as any
+    room: Room
+    player: Player
 }
 
 wss.addListener("connection", (rawClient) => {
+    console.log("\n")
     const client = extendWebSocket(rawClient)
-    const state: ConnectionState = {}
+    const state: ConnectionState = {} as any
 
     client.addEventListener("message", (e) => {
         try {
-            const data: WSReq = JSON.parse(e.data.toString())
-            client.emitCustomEvent(data.eventName, data as any)
+            const event = JSON.parse(e.data.toString())
+            client.emitCustomEvent(event.eventName, event.data)
         } catch (error) {
-            client.send(JSON.stringify({
-                eventName: "error",
+            client.sendCustomEvent("error", {
                 msg: (error as any).toString()
-            } as WSError))
+            })
         }
     })
 
     client.addCustomEventListener("create", (d) => {
-        console.log(d)
+        const p = new Player({
+            name: d.name,
+            webSocket: client
+        })
+
+        const r = new Room({
+            size: d.size,
+            gameMaster: p
+        })
+
+        ROOM[r.id] = r
+        state.player = p
+        state.room = r
+
+        client.sendCustomEvent("created", {
+            roomId: r.id,
+            playerId: p.id
+        })
     })
-    
+
     client.addCustomEventListener("join", (d) => {
-        console.log("Joined")
+        const r = ROOM[d.roomId]
+        if(!r) throw "Invalid room"
+
+        const p = new Player({
+            name: d.name,
+            webSocket: client
+        })
+
+        r.addPlayer(p)
+        state.player = p
+        state.room = r
+
+        client.sendCustomEvent("joined", {
+            names: r.getPlayers().map(p => p.name)
+        }, { room: r })
+    })
+
+    client.addCustomEventListener("start", () => {
+        if(state.player.id !== state.room.gameMasterId) throw "You're not game master"
+        client.sendCustomEvent("started", {}, { room : state.room })
+    })
+
+    client.addCustomEventListener("ready", (d) => {
+        state.player.setReady({
+            PosToVal: d.PosToVal,
+            ValToPos: d.ValToPos
+        })
+
+        if(state.room.allReady()){
+            client.sendCustomEvent("readied", {}, { room: state.room })
+        }
     })
 
     client.addEventListener("close", () => {
@@ -114,10 +125,8 @@ wss.addListener("connection", (rawClient) => {
         const player = state.player
         if(!room || !player) return
 
-        delete state.player
         room.removePlayer(player)
-        if(room.gameMaster === player){
-            delete state.room
+        if(player.id === room.gameMasterId){
             delete ROOM[room.id]
         }
     })

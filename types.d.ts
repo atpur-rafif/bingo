@@ -1,70 +1,48 @@
-// Fix this thing
-type WSCreate = {
-    eventName: "create",
-    roomId: string,
-    name: string,
-    size: number
+export type GameEventRequest = {
+    create: {
+        name: string
+        size: number
+    },
+    join: {
+        name: string
+        roomId: string
+    },
+    start: {},
+    ready: {
+        PosToVal: Record<number, number>
+        ValToPos: Record<number, number>
+    },
+    turn: {
+        pos: number
+    },
+    finish: {},
+
+    // TODO: Implement refresh later
 }
 
-type WSJoin = {
-    eventName: "join",
-    roomId: string,
-    name: string
+export type GameEventResponse = {
+    created: {
+        roomId: string,
+        playerId: string
+    },
+    joined: {
+        names: string[]
+    },
+    started: {},
+    readied: {},
+    turned: {
+        pos: number
+    },
+    finished: {},
+    error: {
+        msg: string
+    }
 }
 
-type WSReady = {
-    eventName: "ready"
-    roomId: string
-    playerId: string,
-    PosToVal: Record<number, number>
-    ValToPos: Record<number, number>
-}
-
-type WSTurn = {
-    eventName: "turn"
-    pos: number
-}
-
-export type WSReq = WSCreate
-    | WSJoin
-    | WSReady
-    | WSTurn
-
-type WSCreated = {
-    eventName: "created"
-    roomId: string
-    playerId: string
-    size: number
-}
-
-type WSJoined = {
-    eventName: "joined",
-    roomId: string,
-    playerId: string
-    size: number,
-}
-
-type WSReadied = {
-    eventName: "readied",
-}
-
-type WSTurned = {
-    eventName: "turned",
-    pos: number
-}
-
-type WSError = {
-    eventName: "error"
-    msg: string
-}
-
-export type WSRes = WSCreated
-    | WSJoined
-    | WSReadied
-    | WSTurned
-    | WSError
-
-export type WS = [WSReady, WSReadied | void]
-    | [WSCreate, WSCreated]
-    | [WSJoin, WSJoined]
-    | [WSTurn, WSTurned]
+export type GameEvent = GameEventRequest & GameEventResponse
+export type WebSocketEvent = {
+    [T in keyof GameEvent]: {
+        eventName: T,
+        data: GameEvent[T]
+    }
+}[keyof GameEvent]
