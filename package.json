@@ -1,10 +1,10 @@
 {
   "scripts": {
-    "tsc-front": "tsc --project ./front-end/script/tsconfig.json --watch",
-    "tsc-back": "tsc --project ./back-end/tsconfig.json --watch",
+    "tsc-front": "tsc --project ./frontend/script/tsconfig.json --watch",
+    "tsc-back": "tsc --project ./backend/tsconfig.json --watch",
     "server": "nodemon --watch \"./dist/**/*\" --ignore \"./dist/static/**/*\" --exec \"if [ -f ./dist/index.js ]; then node ./dist/index.js; fi\"",
-    "cp-front": "mkdir -p ./dist/static && cp ./front-end/index.* ./dist/static",
-    "static": "nodemon -e \"*\" --watch './front-end/*' --ignore './front-end/script' --exec \"npm run cp-front\"",
+    "cp-front": "mkdir -p ./dist/static && cp ./frontend/index.* ./dist/static",
+    "static": "nodemon -e \"*\" --watch './frontend/*' --ignore './frontend/script' --exec \"npm run cp-front\"",
     "dev": "conc -n \"tsc-front,tsc-back,static,server\" \"npm run tsc-front\" \"npm run tsc-back\" \"npm run static\" \"npm run server\""
   },
   "devDependencies": {
