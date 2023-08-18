@@ -1,113 +1,122 @@
-const app = document.getElementById("app") as HTMLDivElement
+import { borderBelowAnimation } from "./Styling"
+import { child, createComponent, hideable } from "./Component"
 
-type Beautify<T> = {
-    [K in keyof T]: T[K]
-} & {}
+const app = document.getElementById("app") as HTMLElement
+console.log(app)
 
-type Assign<A extends object, B extends object> = {
-    [K in keyof (A & B)]: K extends keyof B ? B[K] : A[K & keyof A]
-}
-
-type El = HTMLElementTagNameMap & { "element": HTMLElement }
-type ElOption<K extends keyof El> = {
-    [T in keyof El[K] as (El[K][T] extends string | boolean | number ? T : never)]?: El[K][T]
-}
-
-type Component<K extends keyof El, P extends object> = HTMLElement & ComponentCustomProps<K, P>
-
-type ComponentCustomProps<K extends keyof El, P extends object> = {
-    core: El[K],
-    ext: P
-}
-
-type Extension<K extends keyof El, P extends object> = (args: { core: El[K], el: HTMLElement }) => {
-    newEl?: HTMLElement
-    props: P
-}
-
-type ExtensionFactory<C extends object, K extends keyof El, P extends object> = (config: C) => Extension<K, P>
-
-type ExtensionInput = Extension<any, any> | { [key: string]: Extension<any, any> }
-
-type ExtractExtensionReturnAll<E extends ExtensionInput[]> = 
-    E extends [infer A extends ExtensionInput, ...infer B extends ExtensionInput[]] ? Beautify<Assign<ExtractExtensionReturn<A>, ExtractExtensionReturnAll<B>>> : {}
-
-type ExtractExtensionReturn<E extends ExtensionInput> = 
-    E extends Extension<infer _, infer P> ? P :
-    E extends object ? { [K in keyof E]: ExtractExtensionReturn<E[K]> } :
-    never
-
-export function createComponent<K extends keyof El, E extends ExtensionInput[]>(tagName: K, options?: ElOption<K>, ...extensions: E): Component<K, ExtractExtensionReturnAll<E>> {
-    let el = document.createElement(tagName) as any
-    const core = el
-    const props = {}
-    Object.assign(el, options)
-
-    const apply = (e: Extension<any, any>, name?: string) => {
-        const r = e({ core, el })
-        if(r.newEl) el = r.newEl
-
-        const p = name ? { [name]: r.props } : r.props
-        Object.assign(props, p)
+class Menu{
+    optionButton = {
+        join: createComponent("button", { innerText: "Join Room" }, borderBelowAnimation),
+        create: createComponent("button", { innerText: "Create Room" }, borderBelowAnimation)
     }
 
-    extensions.forEach(e => {
-        if(typeof e === "object") Object.keys(e).forEach(k => apply(e[k], k))
-        else if(typeof e === "function") apply(e)
-    })
+    optionContainer = createComponent("div", { className: "option-menu" },
+        hideable({
+            type: "height",
+            shown: false
+        }),
+        child([
+            this.optionButton.join,
+            this.optionButton.create
+        ])
+    )
 
-    el.ext = {}
-    Object.assign(el.ext, props)
-    return el as any
+    joinRoomButton = createComponent("button", { innerText: "Join" }, borderBelowAnimation)
+    joinRoomInput = createComponent("input", { type: "text", placeholder: "Room Id" })
+    joinBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation)
+    joinContainer = createComponent("div", { className: "join-menu" },
+        hideable({
+            type: "height",
+            shown: false
+        }),
+        child([
+            this.joinRoomInput,
+            this.joinRoomButton,
+            this.joinBackButton
+        ])
+    )
+
+    createRoomButton = createComponent("button", { innerText: "Create" }, borderBelowAnimation)
+    createRoomInput = createComponent("input", { type: "text", placeholder: "Room Id" })
+    createBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation)
+    createContainer = createComponent("div", { className: "create-menu" }, 
+        hideable({
+            type: "height",
+            shown: false
+        }),
+        child([
+            this.createRoomInput,
+            this.createRoomButton,
+            this.createBackButton
+        ])
+    )
+
+    el = createComponent("div", { className: "menu" }, 
+        hideable({
+            type: "width",
+            shown: true
+        }),
+        child([
+            this.optionContainer,
+            this.createContainer,
+            this.joinContainer
+        ])
+    )
+
+    constructor() {
+        this.setState("option")
+        this.optionButton.join.core.addEventListener("click", () => {
+            this.setState("join")
+        })
+
+        this.optionButton.create.core.addEventListener("click", () => {
+            this.setState("create")
+        })
+
+        ;[this.createBackButton, this.joinBackButton].forEach(v => v.core.addEventListener("click", () => {
+            this.setState("option")
+        }))
+
+        this.createRoomButton.core.addEventListener("click", () => {
+            const room = this.createRoomInput.core.value
+            console.log(room, "Create")
+        })
+
+        this.joinRoomButton.core.addEventListener("click", () => {
+            const room = this.joinRoomInput.core.value
+            console.log(room, "Join")
+        })
+
+        setTimeout(() => {
+            this.setState("join")
+        }, 0);
+    }
+
+    state: "option" | "create" | "join" = "option"
+    setState(newState: typeof this.state){
+        [
+            this.optionContainer,
+            this.createContainer,
+            this.joinContainer
+        ].forEach(v => v.ext.hide())
+
+        this[`${newState}Container`].ext.show()
+    }
+
+    hide(){
+        this.el.ext.hide()
+    }
+
+    show(){
+        this.el.ext.show()
+    }
+
+    
 }
 
-const hideable: ExtensionFactory<
-    {
-        type: "width" | "height",
-        shown: boolean
-    },
-    "element",
-    {
-        hidden: boolean,
-        show: () => void,
-        hide: () => void,
-        toggleHide: () => void
-    }
-> = ({ type, shown }) => {
-    return ({ el }) => {
-        const className = `hide-${type} ${shown ? "show" : ""}` 
-        const wrapper = createComponent("div", { className })
-        wrapper.append(el)
+class Game {
 
-        return {
-            newEl: wrapper,
-            props: {
-                hidden: shown,
-                hide() {
-                    wrapper.classList.remove("show")
-                    this.hidden = true
-                },
-                show() {
-                    wrapper.classList.add("show")
-                    this.hidden = false
-                },
-                toggleHide() {
-                    if(this.hidden) this.show()
-                    else this.hide()
-                },
-            }
-        }
-    }
 }
 
-const p = createComponent("div", { innerText: "Hello" },
-    hideable({
-        type: "height",
-        shown: false
-    })
-)
-app.append(p)
-
-setTimeout(() => {
-    p.ext.show()
-}, 100);
+const menu = new Menu()
+app.append(menu.el)
