@@ -61,6 +61,53 @@ export function createComponent<K extends keyof El, E extends ExtensionInput[]>(
     return el as any
 }
 
-const p = createComponent("div", { innerHTML: "LMAO" }, () => { return { props: { a: 10 } } })
-p.ext.a = 120
-console.log(p, p.ext)
+const hideable: ExtensionFactory<
+    {
+        type: "width" | "height",
+        shown: boolean
+    },
+    "element",
+    {
+        hidden: boolean,
+        show: () => void,
+        hide: () => void,
+        toggleHide: () => void
+    }
+> = ({ type, shown }) => {
+    return ({ el }) => {
+        const className = `hide-${type} ${shown ? "show" : ""}` 
+        const wrapper = createComponent("div", { className })
+        wrapper.append(el)
+
+        return {
+            newEl: wrapper,
+            props: {
+                hidden: shown,
+                hide() {
+                    wrapper.classList.remove("show")
+                    this.hidden = true
+                },
+                show() {
+                    wrapper.classList.add("show")
+                    this.hidden = false
+                },
+                toggleHide() {
+                    if(this.hidden) this.show()
+                    else this.hide()
+                },
+            }
+        }
+    }
+}
+
+const p = createComponent("div", { innerText: "Hello" },
+    hideable({
+        type: "height",
+        shown: false
+    })
+)
+app.append(p)
+
+setTimeout(() => {
+    p.ext.show()
+}, 100);
