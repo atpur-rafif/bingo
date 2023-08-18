@@ -9,36 +9,11 @@ body {
     font-family: Arial, Helvetica, sans-serif;
 }
 
-.game {
-    background-color: rgb(199, 199, 199);
-    width: min(80vw, 80vh);
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(5, 1fr);
-    gap: 0.1rem;
-}
+.hide-height, .hide-width{ display: grid; transition: all 0.5s; }
+.hide-height > div, .hide-width > div{ overflow: hidden; }
 
-.grid {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: white;
-    user-select: none;
-    aspect-ratio: 1/1;
-    min-height: 0;
-}
+.hide-height{ grid-template-rows: 0fr; }
+.hide-width{ grid-template-columns: 0fr; }
 
-.grid [data-symbol]{
-    margin: 0px;
-    font-size: x-large;
-}
-
-#menu {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-}
-
-.animate-height{ display: grid; grid-template-rows: 0fr; transition: all 0.5s; opacity: 0; }
-.animate-height > div { overflow: hidden; }
-.animate-height.show{ grid-template-rows: 1fr; opacity: 1; }
+.hide-height.show{ grid-template-rows: 1fr; }
+.hide-width.show{ grid-template-columns: 1fr; }
