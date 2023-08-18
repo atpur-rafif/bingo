@@ -37,11 +37,30 @@ type ExtractExtensionReturn<E extends ExtensionInput> =
     E extends object ? { [K in keyof E]: ExtractExtensionReturn<E[K]> } :
     never
 
-function test<K extends keyof El, E extends ExtensionInput[]>(tagName: K, ...extensions: E): Component<K, ExtractExtensionReturnAll<E>> {
-    return undefined as any
+export function createComponent<K extends keyof El, E extends ExtensionInput[]>(tagName: K, options?: ElOption<K>, ...extensions: E): Component<K, ExtractExtensionReturnAll<E>> {
+    let el = document.createElement(tagName) as any
+    const core = el
+    const props = {}
+    Object.assign(el, options)
+
+    const apply = (e: Extension<any, any>, name?: string) => {
+        const r = e({ core, el })
+        if(r.newEl) el = r.newEl
+
+        const p = name ? { [name]: r.props } : r.props
+        Object.assign(props, p)
+    }
+
+    extensions.forEach(e => {
+        if(typeof e === "object") Object.keys(e).forEach(k => apply(e[k], k))
+        else if(typeof e === "function") apply(e)
+    })
+
+    el.ext = {}
+    Object.assign(el.ext, props)
+    return el as any
 }
 
-const a = "" as any as Extension<"element", { a: string }>
-const b = "" as any as Extension<"element", { b: string }>
-
-const p = test("div", { a, b }, a)
+const p = createComponent("div", { innerHTML: "LMAO" }, () => { return { props: { a: 10 } } })
+p.ext.a = 120
+console.log(p, p.ext)
