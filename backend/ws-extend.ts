@@ -28,7 +28,7 @@ export const extendWebSocket = (ws: WebSocket): WebSocketExtended => {
     newWs.removeCustomEventListener = (eventName, cb) => {
         if(!listener[eventName]) return
         const index = listener[eventName]?.indexOf(cb)
-        if(index === undefined) return
+        if(index === undefined || index === -1) return
         listener[eventName]?.splice(index, 1)
     }
 

@@ -1,8 +1,8 @@
+import "./Event"
 import { borderBelowAnimation } from "./Styling"
 import { child, createComponent, hideable } from "./Component"
 
 const app = document.getElementById("app") as HTMLElement
-console.log(app)
 
 class Menu{
     optionButton = {
@@ -111,7 +111,7 @@ class Menu{
         this.el.ext.show()
     }
 
-    
+
 }
 
 class Game {
