@@ -8,7 +8,7 @@ type Assign<A extends object, B extends object> = {
 
 type El = HTMLElementTagNameMap & { "element": HTMLElement }
 type ElOption<K extends keyof El> = {
-    [T in keyof El[K] as (El[K][T] extends string | boolean | number ? T : never)]?: El[K][T]
+    [T in keyof El[K] as (El[K][T] extends string | boolean | number | null | undefined ? T : never)]?: El[K][T]
 }
 
 type Component<K extends keyof El, P extends object> = HTMLElement & ComponentCustomProps<K, P>
@@ -18,12 +18,13 @@ type ComponentCustomProps<K extends keyof El, P extends object> = {
     ext: P
 }
 
-export type Extension<K extends keyof El, P extends object> = (args: { core: El[K], el: HTMLElement }) => {
+export type Extension<K extends keyof El, P extends object | null = null> = (args: { core: El[K], el: HTMLElement }) => {
     newEl?: HTMLElement
-    props: P
+} & {
+    [T in "props" as (P extends object ? T : never)]: P
 }
 
-export type ExtensionFactory<C, K extends keyof El, P extends object> = (config: C) => Extension<K, P>
+export type ExtensionFactory<C, K extends keyof El, P extends object | null = null> = (config: C) => Extension<K, P>
 
 type ExtensionInput = Extension<any, any> | { [key: string]: Extension<any, any> }
 
@@ -31,7 +32,7 @@ type ExtractExtensionReturnAll<E extends ExtensionInput[]> =
     E extends [infer A extends ExtensionInput, ...infer B extends ExtensionInput[]] ? Beautify<Assign<ExtractExtensionReturn<A>, ExtractExtensionReturnAll<B>>> : {}
 
 type ExtractExtensionReturn<E extends ExtensionInput> = 
-    E extends Extension<infer _, infer P> ? P :
+    E extends (...args: infer _) => { props: infer P } ? P :
     E extends object ? { [K in keyof E]: ExtractExtensionReturn<E[K]> } :
     never
 
@@ -101,27 +102,39 @@ export const hideable: ExtensionFactory<
 
 export const child: ExtensionFactory<
     HTMLElement[],
-    "element",
-    {}
+    "element"
 > = (child: HTMLElement[]) => {
     return ({ core }) => {
         core.append(...child)
-        return {
-            props: {}
-        }
+        return {}
     }
 }
 
 export const styling: ExtensionFactory<
     Partial<CSSStyleDeclaration>,
-    "element",
-    {}
+    "element"
 > = (style, type: "core" | "el" = "el") => {
     return ({ core, el }) => {
         const target = type === "el" ? el : core
         Object.assign(target.style,  style)
-        return {
-            props: {}
-        }
+        return {}
     }
 }
+
+function pp<K extends keyof El, E extends Extension<any, any>[]>(tagName: K, options?: ElOption<K>, extensions?: E): E {
+    return "" as any
+}
+
+const k = pp("div", {}, [child([]), hideable({ shown: false, type: "width"})])
+
+
+
+
+
+
+
+
+
+
+
+

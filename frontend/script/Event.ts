@@ -1,34 +1,61 @@
-class BaseEvent<E extends Record<string, any>>{
-    private listener: Partial<Record<keyof E, CallableFunction[]>> = {}
+import type { GameEventRequest, GameEventResponse, WebSocketEvent } from "@types"
 
-    addEventListener<K extends keyof E>(eventName: K, cb: (data: E[K]) => void){
-        if(!this.listener[eventName]) this.listener[eventName] = []
-        this.listener[eventName]?.push(cb)
+type GameEventResponseListener = {
+    [T in keyof GameEventResponse]: (data: GameEventResponse[T]) => void
+}
+
+const wsLocation = "ws://" + window.location.host
+
+export class EventManager{
+    ws: WebSocket
+    wsWait: Promise<void>
+
+    constructor(){
+        let resolver: CallableFunction
+        this.wsWait = new Promise<void>(r => resolver = r)
+        this.ws = new WebSocket(wsLocation)
+        this.ws.onopen = () => { resolver() }
+        this.ws.onmessage = (e) => {
+            try {
+                const event = JSON.parse(e.data)
+                const eventName = event.eventName
+                delete event.eventName
+                this.emit(eventName, event.data)
+            } catch {}
+        }
     }
 
-    removeEventListener<K extends keyof E>(eventName: K, cb: (data: E[K]) => void){
+    private listener: {
+        [T in keyof GameEventResponse]?: GameEventResponseListener[T][]
+    } = {}
+
+    addEventListener<T extends keyof GameEventResponse>(eventName: T, callback: GameEventResponseListener[T]){
         if(!this.listener[eventName]) this.listener[eventName] = []
-        const index = this.listener[eventName]?.indexOf(cb)
-        if(index === undefined || index === -1) return
+        this.listener[eventName]?.push(callback)
+    }
+
+    removeEventListener<T extends keyof GameEventResponse>(eventName: T, callback: GameEventResponseListener[T]){
+        if(!this.listener[eventName]) return
+        const index = this.listener[eventName]?.indexOf(callback)
+        if(index === undefined) return
         this.listener[eventName]?.splice(index, 1)
     }
 
-    emitEvent<K extends keyof E>(eventName: K, data: E[K]){
-        if(!this.listener[eventName]) return
+    emit<T extends keyof GameEventResponse>(eventName: T, data: GameEventResponse[T]){
+        console.log({
+            eventName: eventName,
+            ...data
+        })
+
+        if (!this.listener[eventName]) return
         this.listener[eventName]?.forEach(cb => cb(data))
     }
+
+    async send<T extends keyof GameEventRequest>(eventName: T, data: GameEventRequest[T]){
+        await this.wsWait
+        this.ws.send(JSON.stringify({
+            eventName: eventName,
+            data
+        } as WebSocketEvent))
+    }
 }
-
-type GameEventName = {
-    "join": null,
-    "create": null
-}
-
-export class GameEvent extends BaseEvent<GameEventName>{}
-
-const p = new GameEvent()
-p.addEventListener("join", () => {
-    console.log("someone joined")
-})
-
-p.emitEvent("join", null)
