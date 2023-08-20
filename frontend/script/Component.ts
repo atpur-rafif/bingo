@@ -18,11 +18,10 @@ type ComponentCustomProps<K extends keyof El, P extends object> = {
     ext: P
 }
 
-export type Extension<P extends object | null = null, K extends keyof El = "element"> = (args: { core: El[K], el: HTMLElement }) => {
-    newEl?: HTMLElement
-} & {
-    [T in "props" as (P extends object ? T : never)]: P
-}
+export type Extension<P extends object | null = null, K extends keyof El = "element"> = (args: { core: El[K], el: HTMLElement }) =>  P extends object ? {
+    newEl?: HTMLElement,
+    props: P
+} : ({ newEl?: HTMLElement } | void)
 
 export type ExtensionFactory<C, P extends object | null = null, K extends keyof El = "element"> = (config: C) => Extension<P, K>
 
@@ -43,11 +42,15 @@ export function createComponent<K extends keyof El, E extends ExtensionInput[]>(
     Object.assign(el, options)
 
     const apply = (e: Extension<any, any>, name?: string) => {
-        const r = e({ core, el })
-        if(r.newEl) el = r.newEl
+        const returned = e({ core, el })
+        if(!returned) return
 
-        const p = name ? { [name]: r.props } : r.props
-        Object.assign(props, p)
+        if(returned.newEl) el = returned.newEl
+        const returnedProps = (returned as any).props
+        if (returnedProps) {
+            const newProps = name ? { [name]: returnedProps } : returnedProps
+            Object.assign(props, newProps)
+        }
     }
 
     extensions.forEach(e => {
@@ -104,7 +107,6 @@ export const child: ExtensionFactory<
 > = (child: HTMLElement[]) => {
     return ({ core }) => {
         core.append(...child)
-        return {}
     }
 }
 
@@ -114,6 +116,5 @@ export const styling: ExtensionFactory<
     return ({ core, el }) => {
         const target = type === "el" ? el : core
         Object.assign(target.style,  style)
-        return {}
     }
 }
