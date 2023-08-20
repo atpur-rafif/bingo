@@ -120,21 +120,3 @@ export const styling: ExtensionFactory<
         return {}
     }
 }
-
-function pp<K extends keyof El, E extends Extension<any, any>[]>(tagName: K, options?: ElOption<K>, extensions?: E): E {
-    return "" as any
-}
-
-const k = pp("div", {}, [child([]), hideable({ shown: false, type: "width"})])
-
-
-
-
-
-
-
-
-
-
-
-
