@@ -18,13 +18,13 @@ type ComponentCustomProps<K extends keyof El, P extends object> = {
     ext: P
 }
 
-export type Extension<K extends keyof El, P extends object | null = null> = (args: { core: El[K], el: HTMLElement }) => {
+export type Extension<P extends object | null = null, K extends keyof El = "element"> = (args: { core: El[K], el: HTMLElement }) => {
     newEl?: HTMLElement
 } & {
     [T in "props" as (P extends object ? T : never)]: P
 }
 
-export type ExtensionFactory<C, K extends keyof El, P extends object | null = null> = (config: C) => Extension<K, P>
+export type ExtensionFactory<C, P extends object | null = null, K extends keyof El = "element"> = (config: C) => Extension<P, K>
 
 type ExtensionInput = Extension<any, any> | { [key: string]: Extension<any, any> }
 
@@ -66,7 +66,6 @@ export const hideable: ExtensionFactory<
         type: "width" | "height",
         shown: boolean
     },
-    "element",
     {
         hidden: boolean,
         show: () => void,
@@ -101,8 +100,7 @@ export const hideable: ExtensionFactory<
 }
 
 export const child: ExtensionFactory<
-    HTMLElement[],
-    "element"
+    HTMLElement[]
 > = (child: HTMLElement[]) => {
     return ({ core }) => {
         core.append(...child)
@@ -111,8 +109,7 @@ export const child: ExtensionFactory<
 }
 
 export const styling: ExtensionFactory<
-    Partial<CSSStyleDeclaration>,
-    "element"
+    Partial<CSSStyleDeclaration>
 > = (style, type: "core" | "el" = "el") => {
     return ({ core, el }) => {
         const target = type === "el" ? el : core
