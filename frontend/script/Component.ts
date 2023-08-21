@@ -118,3 +118,40 @@ export const styling: ExtensionFactory<
         Object.assign(target.style,  style)
     }
 }
+
+type Emitter<P extends Record<string, any>> = {
+    [K in keyof P]: (eventName: K, data: P[K]) => void
+}[keyof P]
+
+type ListenerManager<P extends Record<string, any>> = { [K in keyof P]: (eventName: K, cb: (data: P[K]) => void) => void }[keyof P]
+type Listener<P extends Record<string, any>> = {
+    addEventListener: ListenerManager<P>
+    removeEventListener: ListenerManager<P>
+}
+
+export const eventComponent = function <P extends Record<string, any>>(): [Emitter<P>, Extension<Listener<P>>] {
+    const obj: Partial<Record<keyof P, CallableFunction[]>> = {}
+
+    const ext: Extension<Listener<P>> = ({core, el}) => {
+        return {
+            props: {
+                addEventListener: (eventName, cb) => {
+                    if(!obj[eventName]) obj[eventName] = []
+                    obj[eventName]?.push(cb)
+                },
+                removeEventListener: (eventName, cb) => {
+                    const index = obj[eventName]?.indexOf(cb)
+                    if(index === undefined || index === -1) return
+                    obj[eventName]?.splice(index, 1)
+                }
+            }
+        }
+    }
+
+    const emitter: Emitter<P> = (eventName, data) => {
+        if(!obj[eventName]) return
+        obj[eventName]?.forEach(cb => cb(data))
+    }
+
+    return [emitter, ext] as any
+}
