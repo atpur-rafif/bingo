@@ -119,27 +119,30 @@ export const styling: ExtensionFactory<
     }
 }
 
-type Emitter<P extends Record<string, any>> = {
-    [K in keyof P]: (eventName: K, data: P[K]) => void
-}[keyof P]
+type Emitter<P extends Record<string, any>> = <K extends keyof P>(eventName: K, data: P[K]) => void
 
-type ListenerManager<P extends Record<string, any>> = { [K in keyof P]: (eventName: K, cb: (data: P[K]) => void) => void }[keyof P]
+type ListenerMutator<P extends object> = <K extends keyof P>(eventName:K, cb: (data:P[K]) => void) => void
 type Listener<P extends Record<string, any>> = {
-    addEventListener: ListenerManager<P>
-    removeEventListener: ListenerManager<P>
+    addEventListener: ListenerMutator<P>
+    removeEventListener: ListenerMutator<P>
+}
+
+type obj = {
+    a: string,
+    b: number
 }
 
 export const eventComponent = function <P extends Record<string, any>>(): [Emitter<P>, Extension<Listener<P>>] {
     const obj: Partial<Record<keyof P, CallableFunction[]>> = {}
 
-    const ext: Extension<Listener<P>> = ({core, el}) => {
+    const ext: Extension<Listener<P>> = () => {
         return {
             props: {
-                addEventListener: (eventName, cb) => {
+                addEventListener: (eventName: keyof P, cb: CallableFunction) => {
                     if(!obj[eventName]) obj[eventName] = []
                     obj[eventName]?.push(cb)
                 },
-                removeEventListener: (eventName, cb) => {
+                removeEventListener: (eventName: keyof P, cb: CallableFunction) => {
                     const index = obj[eventName]?.indexOf(cb)
                     if(index === undefined || index === -1) return
                     obj[eventName]?.splice(index, 1)
@@ -148,7 +151,7 @@ export const eventComponent = function <P extends Record<string, any>>(): [Emitt
         }
     }
 
-    const emitter: Emitter<P> = (eventName, data) => {
+    const emitter = (eventName: keyof P, data: any) => {
         if(!obj[eventName]) return
         obj[eventName]?.forEach(cb => cb(data))
     }

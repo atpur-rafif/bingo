@@ -1,73 +1,46 @@
 import { borderBelowAnimation } from "./Styling";
-import { child, createComponent, hideable, styling } from "./Component";
+import { child, createComponent, eventComponent, hideable, styling } from "./Component";
 import { EventManager } from "./Event";
 
+const Option = function(this: Menu){
+    const [emit, eventExt] = eventComponent<{
+        choose: "join" | "create"
+    }>()
 
-const Join = function (this: Menu) {
-    const joinRoomButton = createComponent("button", { innerText: "Join" }, borderBelowAnimation);
-    const joinRoomInput = createComponent("input", { type: "text", placeholder: "Room Id" });
-    const joinBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation);
-    joinBackButton.addEventListener("click", () => this.setState("option"))
+    const join = createComponent("button", {
+        innerText: "Join Room",
+        ariaLabel: "join"
+    }, borderBelowAnimation)
+    const create = createComponent("button", { innerText: "Create Room" }, borderBelowAnimation)
 
-    joinRoomButton.addEventListener("click", () => {
+    join.addEventListener("click", () => emit("choose", "join"))
+    create.addEventListener("click", () => emit("choose", "create"))
 
-    })
-
-    return createComponent("div", { className: "join-menu" },
+    return createComponent("div", { className: "option-menu" },
+        eventExt,
         hideable({
             type: "height",
             shown: false
         }),
         child([
-            joinRoomInput,
-            joinRoomButton,
-            joinBackButton
+            create, 
+            join
         ])
     );
 }
 
-const Loading = function(this: Menu){
-    const loadingText = createComponent("div")
+const Create = function () {
+    const [emit, eventExt] = eventComponent<{
+        cancel: null
+    }>()
 
-    return createComponent("div", {}, 
-        hideable({
-            type: "height",
-            shown: false
-        }),
-        child([
-            loadingText
-        ]),
-        () => {
-            return {
-                props: {
-                    setText(text: string){
-                        loadingText.innerText = text
-                    }
-                }
-            }
-        }
-    )
-}
-
-const Create = function (this: Menu) {
     const createRoomButton = createComponent("button", { innerText: "Create" }, borderBelowAnimation);
     const createRoomInput = createComponent("input", { type: "text", placeholder: "Name" });
     const createBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation);
-    createBackButton.addEventListener("click", () => this.setState("option"))
-
-    createRoomButton.addEventListener("click", () => {
-        this.startLoading("Creating room...")
-        this.eventManager.send("create", {
-            name: createRoomInput.core.value,
-            size: 5
-        })
-
-        this.eventManager.addEventListener("created", () => {
-            this.setState("waiting")
-        })
-    })
+    createBackButton.addEventListener("click", () => emit("cancel", null))
 
     return createComponent("div", { className: "create-menu" },
+        eventExt,
         hideable({
             type: "height",
             shown: false
@@ -80,24 +53,30 @@ const Create = function (this: Menu) {
     );
 }
 
-const Option = function(this: Menu){
-    const join = createComponent("button", {
-        innerText: "Join Room",
-        ariaLabel: "join"
-    }, borderBelowAnimation)
-    const create = createComponent("button", { innerText: "Create Room" }, borderBelowAnimation)
+const Join = function () {
+    const [emit, eventExt] = eventComponent<{
+        "cancel": null
+    }>()
 
-    join.addEventListener("click", () => this.setState("join"))
-    create.addEventListener("click", () => this.setState("create"))
+    const joinRoomButton = createComponent("button", { innerText: "Join" }, borderBelowAnimation);
+    const joinRoomInput = createComponent("input", { type: "text", placeholder: "Room Id" });
+    const joinBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation);
+    joinBackButton.addEventListener("click", () => emit("cancel", null))
 
-    return createComponent("div", { className: "option-menu" },
+    joinRoomButton.addEventListener("click", () => {
+
+    })
+
+    return createComponent("div", { className: "join-menu" },
+        eventExt,
         hideable({
             type: "height",
             shown: false
         }),
         child([
-            create, 
-            join
+            joinRoomInput,
+            joinRoomButton,
+            joinBackButton
         ])
     );
 }
@@ -144,11 +123,40 @@ const Waiting = function(this: Menu){
     )
 }
 
+const Loading = function(){
+    const loadingText = createComponent("div")
+
+    return createComponent("div", {}, 
+        hideable({
+            type: "height",
+            shown: false
+        }),
+        child([
+            loadingText
+        ]),
+        () => {
+            return {
+                props: {
+                    setText(text: string){
+                        loadingText.innerText = text
+                    }
+                }
+            }
+        }
+    )
+}
+
 export class Menu {
     eventManager: EventManager
     constructor(eventManager: EventManager) {
         this.eventManager = eventManager
         this.setState("option");
+
+        this.option.ext.addEventListener("choose", (opt) => this.setState(opt))
+
+        ;[this.create, this.join].forEach(v => v.ext.addEventListener("cancel", () => {
+            this.setState("option")
+        }))
     }
 
     create = Create.apply(this)
