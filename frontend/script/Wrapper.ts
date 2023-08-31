@@ -11,7 +11,10 @@ const WrapperFactory = <K extends keyof El, P extends object>(cb: (input: HTMLEl
     const fn: Wrapper<P, K> = (input) => {
         const { newEl, props } = cb(input)
         Object.assign(newEl, { wrapperExt: props, core: input })
+
         if("ext" in input) Object.assign(newEl, { ext: input.ext })
+        if("wrapperExt" in input) Object.assign(newEl, { wrapperExt: input.wrapperExt })
+
         return newEl as any
     }
     return fn
@@ -38,6 +41,7 @@ setTimeout(() => {
     const p = createComponent("div", { innerHTML: "HELLO" })
     const q = testWrapper(p)
     app.append(q)
+    console.log(q.ext)
     setTimeout(() => {
         q.wrapperExt.test()
     }, 100);
