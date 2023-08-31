@@ -6,20 +6,20 @@ type Assign<A extends object, B extends object> = {
     [K in keyof (A & B)]: K extends keyof B ? B[K] : A[K & keyof A]
 }
 
-type El = HTMLElementTagNameMap
+export type El = HTMLElementTagNameMap & { "el": HTMLElement }
 type ElOption<K extends keyof El> = {
     [T in keyof El[K] as (El[K][T] extends string | boolean | number | null | undefined ? T : never)]?: El[K][T]
 }
 
-type Component<K extends keyof El, P extends object> = El[K] & ComponentCustomProps<P>
+export type Component<K extends keyof El = "el", P extends object = {}> = El[K] & ComponentCustomProps<P>
 
 type ComponentCustomProps<P extends object> = {
     ext: P
 }
 
-export type Extension<P extends object | null = null, K extends keyof El = "div"> = (el: El[K]) =>  P extends object ? P : void
+export type Extension<P extends object | null = null, K extends keyof El = "el"> = (el: El[K]) =>  P extends object ? P : void
 
-export type ExtensionFactory<C, P extends object | null = null, K extends keyof El = "div"> = (config: C) => Extension<P, K>
+export type ExtensionFactory<C, P extends object | null = null, K extends keyof El = "el"> = (config: C) => Extension<P, K>
 
 type ExtensionInput = Extension<any, any> | { [key: string]: Extension<any, any> }
 

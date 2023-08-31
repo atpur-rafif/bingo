@@ -1,5 +1,6 @@
 import "./test"
 import "./Event"
+import "./Wrapper"
 import { EventManager } from "./Event"
 import { Menu } from "./Menu"
 
