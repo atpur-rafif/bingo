@@ -119,7 +119,7 @@ export const styling: ExtensionFactory<
     }
 }
 
-type Emitter<P extends Record<string, any>> = <K extends keyof P>(eventName: K, data: P[K]) => void
+type Emitter<P extends Record<string, any>> = <K extends keyof P>(eventName: K, ...data: P[K] extends null ? [] : [P[K]]) => void
 
 type ListenerMutator<P extends object> = <K extends keyof P>(eventName:K, cb: (data:P[K]) => void) => void
 type Listener<P extends Record<string, any>> = {

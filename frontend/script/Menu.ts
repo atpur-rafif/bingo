@@ -2,7 +2,7 @@ import { borderBelowAnimation } from "./Styling";
 import { child, createComponent, eventComponent, hideable, styling } from "./Component";
 import { EventManager } from "./Event";
 
-const Option = function(this: Menu){
+const Option = function(){
     const [emit, eventExt] = eventComponent<{
         choose: "join" | "create"
     }>()
@@ -31,13 +31,19 @@ const Option = function(this: Menu){
 
 const Create = function () {
     const [emit, eventExt] = eventComponent<{
-        cancel: null
+        cancel: null,
+        create: {
+            name: string
+        }
     }>()
 
     const createRoomButton = createComponent("button", { innerText: "Create" }, borderBelowAnimation);
     const createRoomInput = createComponent("input", { type: "text", placeholder: "Name" });
     const createBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation);
-    createBackButton.addEventListener("click", () => emit("cancel", null))
+    createBackButton.addEventListener("click", () => emit("cancel"))
+    createRoomButton.addEventListener("click", () => {
+        emit("create", { name: createRoomInput.core.value })
+    })
 
     return createComponent("div", { className: "create-menu" },
         eventExt,
@@ -61,7 +67,7 @@ const Join = function () {
     const joinRoomButton = createComponent("button", { innerText: "Join" }, borderBelowAnimation);
     const joinRoomInput = createComponent("input", { type: "text", placeholder: "Room Id" });
     const joinBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation);
-    joinBackButton.addEventListener("click", () => emit("cancel", null))
+    joinBackButton.addEventListener("click", () => emit("cancel"))
 
     joinRoomButton.addEventListener("click", () => {
 
@@ -81,7 +87,7 @@ const Join = function () {
     );
 }
 
-const Waiting = function(this: Menu){
+const Waiting = function(){
     const user = ["A", "B", "C"]
 
     const list = createComponent("div", {},
@@ -157,13 +163,17 @@ export class Menu {
         ;[this.create, this.join].forEach(v => v.ext.addEventListener("cancel", () => {
             this.setState("option")
         }))
+
+        this.create.ext.addEventListener("create", (d) => {
+            console.log(d.name)
+        })
     }
 
-    create = Create.apply(this)
-    join = Join.apply(this)
-    option = Option.apply(this)
-    waiting = Waiting.apply(this)
-    loading = Loading.apply(this)
+    create = Create()
+    join = Join()
+    option = Option()
+    waiting = Waiting()
+    loading = Loading()
 
     el = createComponent("div", { className: "menu" },
         hideable({
