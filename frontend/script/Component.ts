@@ -6,24 +6,20 @@ type Assign<A extends object, B extends object> = {
     [K in keyof (A & B)]: K extends keyof B ? B[K] : A[K & keyof A]
 }
 
-type El = HTMLElementTagNameMap & { "element": HTMLElement }
+type El = HTMLElementTagNameMap
 type ElOption<K extends keyof El> = {
     [T in keyof El[K] as (El[K][T] extends string | boolean | number | null | undefined ? T : never)]?: El[K][T]
 }
 
-type Component<K extends keyof El, P extends object> = HTMLElement & ComponentCustomProps<K, P>
+type Component<K extends keyof El, P extends object> = El[K] & ComponentCustomProps<P>
 
-type ComponentCustomProps<K extends keyof El, P extends object> = {
-    core: El[K],
+type ComponentCustomProps<P extends object> = {
     ext: P
 }
 
-export type Extension<P extends object | null = null, K extends keyof El = "element"> = (args: { core: El[K], el: HTMLElement }) =>  P extends object ? {
-    newEl?: HTMLElement,
-    props: P
-} : ({ newEl?: HTMLElement } | void)
+export type Extension<P extends object | null = null, K extends keyof El = "div"> = (el: El[K]) =>  P extends object ? P : void
 
-export type ExtensionFactory<C, P extends object | null = null, K extends keyof El = "element"> = (config: C) => Extension<P, K>
+export type ExtensionFactory<C, P extends object | null = null, K extends keyof El = "div"> = (config: C) => Extension<P, K>
 
 type ExtensionInput = Extension<any, any> | { [key: string]: Extension<any, any> }
 
@@ -31,22 +27,17 @@ type ExtractExtensionReturnAll<E extends ExtensionInput[]> =
     E extends [infer A extends ExtensionInput, ...infer B extends ExtensionInput[]] ? Beautify<Assign<ExtractExtensionReturn<A>, ExtractExtensionReturnAll<B>>> : {}
 
 type ExtractExtensionReturn<E extends ExtensionInput> = 
-    E extends (...args: infer _) => { props: infer P } ? P :
+    E extends (...args: infer _) => infer P ? P :
     E extends object ? { [K in keyof E]: ExtractExtensionReturn<E[K]> } :
     never
 
 export function createComponent<K extends keyof El, E extends ExtensionInput[]>(tagName: K, options?: ElOption<K>, ...extensions: E): Component<K, ExtractExtensionReturnAll<E>> {
-    let el = document.createElement(tagName) as any
-    const core = el
+    const el = document.createElement(tagName) as any
     const props = {}
     Object.assign(el, options)
 
     const apply = (e: Extension<any, any>, name?: string) => {
-        const returned = e({ core, el })
-        if(!returned) return
-
-        if(returned.newEl) el = returned.newEl
-        const returnedProps = (returned as any).props
+        const returnedProps = e(el)
         if (returnedProps) {
             const newProps = name ? { [name]: returnedProps } : returnedProps
             Object.assign(props, newProps)
@@ -60,10 +51,10 @@ export function createComponent<K extends keyof El, E extends ExtensionInput[]>(
 
     el.ext = {}
     Object.assign(el.ext, props)
-    el.core = core
     return el as any
 }
 
+/*
 export const hideable: ExtensionFactory<
     {
         type: "width" | "height",
@@ -76,7 +67,10 @@ export const hideable: ExtensionFactory<
         toggleHide: () => void
     }
 > = ({ type, shown }) => {
-    return ({ el }) => {
+    return () => {
+
+        return {}
+
         const className = `hide-${type} ${shown ? "show" : ""}` 
         const wrapper = createComponent("div", { className })
         wrapper.append(el)
@@ -101,21 +95,21 @@ export const hideable: ExtensionFactory<
         }
     }
 }
+*/
 
 export const child: ExtensionFactory<
     HTMLElement[]
 > = (child: HTMLElement[]) => {
-    return ({ core }) => {
-        core.append(...child)
+    return (el) => {
+        el.append(...child)
     }
 }
 
 export const styling: ExtensionFactory<
     Partial<CSSStyleDeclaration>
-> = (style, type: "core" | "el" = "el") => {
-    return ({ core, el }) => {
-        const target = type === "el" ? el : core
-        Object.assign(target.style,  style)
+> = (style) => {
+    return (el) => {
+        Object.assign(el.style,  style)
     }
 }
 
@@ -137,16 +131,14 @@ export const eventComponent = function <P extends Record<string, any>>(): [Emitt
 
     const ext: Extension<Listener<P>> = () => {
         return {
-            props: {
-                addEventListener: (eventName: keyof P, cb: CallableFunction) => {
-                    if(!obj[eventName]) obj[eventName] = []
-                    obj[eventName]?.push(cb)
-                },
-                removeEventListener: (eventName: keyof P, cb: CallableFunction) => {
-                    const index = obj[eventName]?.indexOf(cb)
-                    if(index === undefined || index === -1) return
-                    obj[eventName]?.splice(index, 1)
-                }
+            addEventListener: (eventName: keyof P, cb: CallableFunction) => {
+                if (!obj[eventName]) obj[eventName] = []
+                obj[eventName]?.push(cb)
+            },
+            removeEventListener: (eventName: keyof P, cb: CallableFunction) => {
+                const index = obj[eventName]?.indexOf(cb)
+                if (index === undefined || index === -1) return
+                obj[eventName]?.splice(index, 1)
             }
         }
     }

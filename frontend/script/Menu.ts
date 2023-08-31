@@ -1,5 +1,5 @@
 import { borderBelowAnimation } from "./Styling";
-import { child, createComponent, eventComponent, hideable, styling } from "./Component";
+import { child, createComponent, eventComponent, styling } from "./Component";
 import { EventManager } from "./Event";
 
 const Option = function(){
@@ -18,10 +18,6 @@ const Option = function(){
 
     return createComponent("div", { className: "option-menu" },
         eventExt,
-        hideable({
-            type: "height",
-            shown: false
-        }),
         child([
             create, 
             join
@@ -42,15 +38,11 @@ const Create = function () {
     const createBackButton = createComponent("button", { innerText: "Back" }, borderBelowAnimation);
     createBackButton.addEventListener("click", () => emit("cancel"))
     createRoomButton.addEventListener("click", () => {
-        emit("create", { name: createRoomInput.core.value })
+        emit("create", { name: createRoomInput.value })
     })
 
     return createComponent("div", { className: "create-menu" },
         eventExt,
-        hideable({
-            type: "height",
-            shown: false
-        }),
         child([
             createRoomInput,
             createRoomButton,
@@ -75,10 +67,6 @@ const Join = function () {
 
     return createComponent("div", { className: "join-menu" },
         eventExt,
-        hideable({
-            type: "height",
-            shown: false
-        }),
         child([
             joinRoomInput,
             joinRoomButton,
@@ -118,10 +106,6 @@ const Waiting = function(){
             alignItems: "center",
             gap: "1rem"
         }),
-        hideable({
-            type: "height",
-            shown: false
-        }),
         child([
             list,
             buttonContainer
@@ -133,19 +117,13 @@ const Loading = function(){
     const loadingText = createComponent("div")
 
     return createComponent("div", {}, 
-        hideable({
-            type: "height",
-            shown: false
-        }),
         child([
             loadingText
         ]),
         () => {
             return {
-                props: {
-                    setText(text: string){
-                        loadingText.innerText = text
-                    }
+                setText(text: string) {
+                    loadingText.innerText = text
                 }
             }
         }
@@ -176,10 +154,6 @@ export class Menu {
     loading = Loading()
 
     el = createComponent("div", { className: "menu" },
-        hideable({
-            type: "width",
-            shown: true
-        }),
         child([
             this.option, this.create, this.join, this.waiting, this.loading
         ])
@@ -187,6 +161,7 @@ export class Menu {
 
     state: "option" | "create" | "join" | "waiting" | "loading" = "option";
     setState(newState: typeof this.state) {
+        /*
         [
             this.create,
             this.option,
@@ -195,6 +170,7 @@ export class Menu {
         ].forEach(v => v.ext.hide());
 
         this[newState].ext.show();
+        */
     }
 
     startLoading(text?:string){
@@ -202,6 +178,7 @@ export class Menu {
         this.setState("loading")
     }
 
+    /*
     hide() {
         this.el.ext.hide();
     }
@@ -209,4 +186,5 @@ export class Menu {
     show() {
         this.el.ext.show();
     }
+    */
 }
