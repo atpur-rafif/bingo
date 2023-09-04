@@ -1,6 +1,7 @@
 import { borderBelowAnimation } from "./Styling";
 import { child, createComponent, eventComponent, styling } from "./Component";
 import { EventManager } from "./Event";
+import { hideableWrapper } from "./Wrapper";
 
 const Option = function(){
     const [emit, eventExt] = eventComponent<{
@@ -16,13 +17,13 @@ const Option = function(){
     join.addEventListener("click", () => emit("choose", "join"))
     create.addEventListener("click", () => emit("choose", "create"))
 
-    return createComponent("div", { className: "option-menu" },
+    return hideableWrapper(createComponent("div", { className: "option-menu" },
         eventExt,
         child([
             create, 
             join
         ])
-    );
+    ), { type: "height", shown: false });
 }
 
 const Create = function () {
@@ -41,14 +42,14 @@ const Create = function () {
         emit("create", { name: createRoomInput.value })
     })
 
-    return createComponent("div", { className: "create-menu" },
+    return hideableWrapper(createComponent("div", { className: "create-menu" },
         eventExt,
         child([
             createRoomInput,
             createRoomButton,
             createBackButton
         ])
-    );
+    ), { type: "height", shown: false });
 }
 
 const Join = function () {
@@ -65,14 +66,14 @@ const Join = function () {
 
     })
 
-    return createComponent("div", { className: "join-menu" },
+    return hideableWrapper(createComponent("div", { className: "join-menu" },
         eventExt,
         child([
             joinRoomInput,
             joinRoomButton,
             joinBackButton
         ])
-    );
+    ), { type: "height", shown: false });
 }
 
 const Waiting = function(){
@@ -99,7 +100,7 @@ const Waiting = function(){
         child([startButton, cancelButton])
     )
 
-    return createComponent("div", {},
+    return hideableWrapper(createComponent("div", {},
         styling({
             display: "flex",
             flexDirection: "column",
@@ -110,13 +111,13 @@ const Waiting = function(){
             list,
             buttonContainer
         ])
-    )
+    ), { type: "height", shown: false });
 }
 
 const Loading = function(){
     const loadingText = createComponent("div")
 
-    return createComponent("div", {}, 
+    return hideableWrapper(createComponent("div", {}, 
         child([
             loadingText
         ]),
@@ -127,7 +128,7 @@ const Loading = function(){
                 }
             }
         }
-    )
+    ), { type: "height", shown: false })
 }
 
 export class Menu {
@@ -161,16 +162,14 @@ export class Menu {
 
     state: "option" | "create" | "join" | "waiting" | "loading" = "option";
     setState(newState: typeof this.state) {
-        /*
         [
             this.create,
             this.option,
             this.join,
             this.loading
-        ].forEach(v => v.ext.hide());
+        ].forEach(v => v.wrapperExt.hide());
 
-        this[newState].ext.show();
-        */
+        this[newState].wrapperExt.show();
     }
 
     startLoading(text?:string){
